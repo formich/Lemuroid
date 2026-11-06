@@ -242,4 +242,5 @@
 
     <string name="game_menu_fast_forward_speed">Fast-forward speed</string>
     <string name="game_fast_forward_indicator">Fast forward: %1$d×</string>
+    <string name="game_fast_forward_stop">Stop fast forward</string>
 </resources>

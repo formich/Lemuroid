@@ -1,21 +1,30 @@
 package com.swordfish.lemuroid.app.shared.game
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -25,26 +34,47 @@ import com.swordfish.lemuroid.R
 @Composable
 internal fun FastForwardIndicator(
     speed: Int,
+    onStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val description = stringResource(R.string.game_fast_forward_indicator, speed)
-    Row(
+    val stopLabel = stringResource(R.string.game_fast_forward_stop)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val shape = RoundedCornerShape(6.dp)
+    Box(
         modifier =
             modifier
                 .safeDrawingPadding()
                 .padding(8.dp)
-                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .clip(shape)
+                .clickable(
+                    enabled = speed > 1,
+                    interactionSource = interactionSource,
+                    indication = androidx.compose.foundation.LocalIndication.current,
+                    role = Role.Button,
+                    onClickLabel = stopLabel,
+                    onClick = onStop,
+                )
+                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 .semantics(mergeDescendants = true) { contentDescription = description },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            Icons.Default.FastForward,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.8f),
-            modifier = Modifier.size(14.dp),
-        )
-        Text(text = "$speed×", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+        Row(
+            modifier =
+                Modifier
+                    .background(if (pressed) Color.DarkGray else Color.Black.copy(alpha = 0.45f), shape)
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Icon(
+                Icons.Default.FastForward,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = if (pressed) 1f else 0.8f),
+                modifier = Modifier.size(14.dp),
+            )
+            Text(text = "$speed×", color = Color.White.copy(alpha = if (pressed) 1f else 0.8f), fontSize = 11.sp)
+        }
     }
 }
