@@ -34,11 +34,12 @@ import com.swordfish.lemuroid.R
 @Composable
 internal fun FastForwardIndicator(
     speed: Int,
-    onStop: () -> Unit,
+    onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val description = stringResource(R.string.game_fast_forward_indicator, speed)
-    val stopLabel = stringResource(R.string.game_fast_forward_stop)
+    val active = speed > 1
+    val actionLabel = stringResource(if (active) R.string.game_fast_forward_stop else R.string.game_fast_forward_resume)
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val shape = RoundedCornerShape(6.dp)
@@ -49,12 +50,11 @@ internal fun FastForwardIndicator(
                 .padding(8.dp)
                 .clip(shape)
                 .clickable(
-                    enabled = speed > 1,
                     interactionSource = interactionSource,
                     indication = androidx.compose.foundation.LocalIndication.current,
                     role = Role.Button,
-                    onClickLabel = stopLabel,
-                    onClick = onStop,
+                    onClickLabel = actionLabel,
+                    onClick = onToggle,
                 )
                 .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 .semantics(mergeDescendants = true) { contentDescription = description },
@@ -63,7 +63,10 @@ internal fun FastForwardIndicator(
         Row(
             modifier =
                 Modifier
-                    .background(if (pressed) Color.DarkGray else Color.Black.copy(alpha = 0.45f), shape)
+                    .background(
+                        if (pressed) Color.DarkGray else Color.Black.copy(alpha = if (active) 0.45f else 0.25f),
+                        shape,
+                    )
                     .padding(horizontal = 6.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -71,10 +74,34 @@ internal fun FastForwardIndicator(
             Icon(
                 Icons.Default.FastForward,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = if (pressed) 1f else 0.8f),
+                tint =
+                    Color.White.copy(
+                        alpha =
+                            if (pressed) {
+                                1f
+                            } else if (active) {
+                                0.8f
+                            } else {
+                                0.5f
+                            },
+                    ),
                 modifier = Modifier.size(14.dp),
             )
-            Text(text = "$speed×", color = Color.White.copy(alpha = if (pressed) 1f else 0.8f), fontSize = 11.sp)
+            Text(
+                text = "$speed×",
+                color =
+                    Color.White.copy(
+                        alpha =
+                            if (pressed) {
+                                1f
+                            } else if (active) {
+                                0.8f
+                            } else {
+                                0.5f
+                            },
+                    ),
+                fontSize = 11.sp,
+            )
         }
     }
 }

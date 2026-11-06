@@ -95,6 +95,7 @@ class BaseGameScreenViewModel(
     }
 
     val frameSpeed = MutableStateFlow(1)
+    val fastForwardIndicatorVisible = MutableStateFlow(false)
 
     private val sideEffects = GameViewModelSideEffects(viewModelScope)
     val retroGameView =
@@ -274,13 +275,24 @@ class BaseGameScreenViewModel(
     fun preferredFrameSpeed(): Int =
         FastForwardSpeeds.preferred(sharedPreferences.getInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, 2))
 
-    fun setFrameSpeed(speed: Int) {
+    fun setFrameSpeed(
+        speed: Int,
+        keepIndicatorVisible: Boolean = false,
+    ) {
         val validated = if (system.fastForwardSupport) FastForwardSpeeds.validate(speed) else 1
         retroGameView.retroGameView?.frameSpeed = validated
         frameSpeed.value = validated
+        fastForwardIndicatorVisible.value = system.fastForwardSupport && (validated > 1 || keepIndicatorVisible)
         if (validated > 1) {
             sharedPreferences.edit().putInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, validated).apply()
         }
+    }
+
+    fun toggleFastForwardFromIndicator() {
+        setFrameSpeed(
+            FastForwardSpeeds.toggle(frameSpeed.value, preferredFrameSpeed()),
+            keepIndicatorVisible = true,
+        )
     }
 
     fun setPreferredFrameSpeed(speed: Int) {

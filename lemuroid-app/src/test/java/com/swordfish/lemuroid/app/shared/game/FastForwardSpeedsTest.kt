@@ -59,4 +59,19 @@ class FastForwardSpeedsTest {
     fun changingPreferredSpeedWhileEnabledUpdatesPlayback() {
         assertEquals(8, FastForwardSpeeds.select(4, 8))
     }
+
+    @Test
+    fun indicatorToggleStopsInsteadOfCyclingToAnotherFastSpeed() {
+        listOf(2, 4, 8, 16).forEach { speed ->
+            assertEquals(1, FastForwardSpeeds.toggle(speed, speed))
+        }
+    }
+
+    @Test
+    fun indicatorToggleResumesTheRememberedSpeed() {
+        listOf(2, 4, 8, 16).forEach { remembered ->
+            val stopped = FastForwardSpeeds.toggle(remembered, remembered)
+            assertEquals(remembered, FastForwardSpeeds.toggle(stopped, remembered))
+        }
+    }
 }

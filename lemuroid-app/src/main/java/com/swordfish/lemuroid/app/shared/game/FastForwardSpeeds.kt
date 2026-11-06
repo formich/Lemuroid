@@ -9,6 +9,11 @@ internal object FastForwardSpeeds {
 
     fun preferred(speed: Int): Int = validate(speed).takeIf { it > 1 } ?: 2
 
+    fun toggle(
+        current: Int,
+        selected: Int,
+    ): Int = if (current > 1) 1 else preferred(selected)
+
     fun select(
         current: Int,
         selected: Int,
