@@ -119,7 +119,7 @@ fun GameMenuHomeScreen(
                         contentDescription = null,
                     )
                 },
-                state = rememberMemoryBooleanSettingState(gameMenuRequest.frameSpeed > 1),
+                state = rememberMemoryBooleanSettingState(gameMenuRequest.fastForwardEnabled),
                 onCheckedChange = {
                     onResult { putExtra(GameMenuContract.RESULT_ENABLE_FAST_FORWARD, it) }
                 },

@@ -94,8 +94,15 @@ class BaseGameScreenViewModel(
         }
     }
 
-    val frameSpeed = MutableStateFlow(1)
-    val fastForwardIndicatorVisible = MutableStateFlow(false)
+    internal val fastForwardState =
+        MutableStateFlow(
+            FastForwardState(
+                preferredSpeed =
+                    FastForwardSpeeds.preferred(
+                        sharedPreferences.getInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, 2),
+                    ),
+            ),
+        )
 
     private val sideEffects = GameViewModelSideEffects(viewModelScope)
     val retroGameView =
@@ -191,7 +198,7 @@ class BaseGameScreenViewModel(
                 saves.restoreAutoSaveAsync(it)
             }
         }
-        result.frameSpeed = frameSpeed.value
+        result.frameSpeed = fastForwardState.value.frameSpeed
         return result
     }
 
@@ -272,40 +279,39 @@ class BaseGameScreenViewModel(
         }
     }
 
-    fun preferredFrameSpeed(): Int =
-        FastForwardSpeeds.preferred(sharedPreferences.getInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, 2))
+    fun preferredFrameSpeed(): Int = fastForwardState.value.preferredSpeed
 
-    fun setFrameSpeed(
-        speed: Int,
-        keepIndicatorVisible: Boolean = false,
-    ) {
-        val validated = if (system.fastForwardSupport) FastForwardSpeeds.validate(speed) else 1
-        retroGameView.retroGameView?.frameSpeed = validated
-        frameSpeed.value = validated
-        fastForwardIndicatorVisible.value = system.fastForwardSupport && (validated > 1 || keepIndicatorVisible)
-        if (validated > 1) {
-            sharedPreferences.edit().putInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, validated).apply()
+    private fun applyFastForwardState(state: FastForwardState) {
+        val next = if (system.fastForwardSupport) state else state.setEnabled(false)
+        val previous = fastForwardState.value
+        retroGameView.retroGameView?.frameSpeed = next.frameSpeed
+        fastForwardState.value = next
+        if (next.preferredSpeed != previous.preferredSpeed) {
+            sharedPreferences.edit().putInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, next.preferredSpeed).apply()
         }
     }
 
+    fun setFastForwardEnabled(enabled: Boolean) {
+        applyFastForwardState(fastForwardState.value.setEnabled(enabled))
+    }
+
+    fun setFrameSpeed(speed: Int) {
+        applyFastForwardState(fastForwardState.value.setFrameSpeed(speed))
+    }
+
     fun toggleFastForwardFromIndicator() {
-        setFrameSpeed(
-            FastForwardSpeeds.toggle(frameSpeed.value, preferredFrameSpeed()),
-            keepIndicatorVisible = true,
-        )
+        applyFastForwardState(fastForwardState.value.toggleOsd())
     }
 
     fun setPreferredFrameSpeed(speed: Int) {
-        val preferred = FastForwardSpeeds.preferred(speed)
-        sharedPreferences.edit().putInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, preferred).apply()
-        setFrameSpeed(FastForwardSpeeds.select(frameSpeed.value, preferred))
+        applyFastForwardState(fastForwardState.value.selectSpeed(speed))
     }
 
     fun toggleFastForward() {
         if (!system.fastForwardSupport) return
         val key = appContext.getString(R.string.pref_key_fast_forward_cycle_speeds)
         val speeds = FastForwardSpeeds.cycle(sharedPreferences.getStringSet(key, null))
-        setFrameSpeed(FastForwardSpeeds.next(frameSpeed.value, speeds))
+        setFrameSpeed(FastForwardSpeeds.next(fastForwardState.value.frameSpeed, speeds))
     }
 
     suspend fun reset() =

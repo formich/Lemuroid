@@ -33,12 +33,11 @@ fun BaseGameScreen(
     if (isGameReady) {
         Box(modifier = Modifier.fillMaxSize()) {
             gameScreen(viewModel)
-            val speed = viewModel.frameSpeed.collectAsState().value
+            val fastForward = viewModel.fastForwardState.collectAsState().value
             val loading = viewModel.loadingState.collectAsState().value
-            val indicatorVisible = viewModel.fastForwardIndicatorVisible.collectAsState().value
-            if (indicatorVisible && !loading) {
+            if (fastForward.enabled && !loading) {
                 FastForwardIndicator(
-                    speed = speed,
+                    speed = fastForward.frameSpeed,
                     onToggle = viewModel::toggleFastForwardFromIndicator,
                     modifier = Modifier.align(Alignment.TopEnd),
                 )

@@ -34,14 +34,14 @@ object GameMenuHelper {
     fun setupFastForwardOption(
         activity: Activity?,
         screen: PreferenceScreen,
-        frameSpeed: Int,
+        fastForwardEnabled: Boolean,
         fastForwardSupported: Boolean,
     ) {
         val preferences = SharedPreferencesHelper.getSharedPreferences(screen.context)
         val preferredSpeed = FastForwardSpeeds.preferred(preferences.getInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, 2))
         val toggle = screen.findPreference<SwitchPreference>(FAST_FORWARD)
         toggle?.isVisible = fastForwardSupported
-        toggle?.isChecked = frameSpeed > 1
+        toggle?.isChecked = fastForwardEnabled
         toggle?.summary = "$preferredSpeed×"
         toggle?.setOnPreferenceChangeListener { _, value ->
             setResultAndFinish(
