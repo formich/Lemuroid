@@ -11,6 +11,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.game.GameService
 import com.swordfish.lemuroid.app.mobile.feature.settings.SettingsManager
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelInput
@@ -24,7 +25,6 @@ import com.swordfish.lemuroid.app.shared.rumble.RumbleManager
 import com.swordfish.lemuroid.app.shared.settings.ControllerConfigsManager
 import com.swordfish.lemuroid.app.shared.settings.HapticFeedbackMode
 import com.swordfish.lemuroid.common.longAnimationDuration
-import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.lib.controller.ControllerConfig
 import com.swordfish.lemuroid.lib.core.CoreVariablesManager
 import com.swordfish.lemuroid.lib.game.GameLoader
@@ -51,7 +51,7 @@ class BaseGameScreenViewModel(
     settingsManager: SettingsManager,
     inputDeviceManager: InputDeviceManager,
     controllerConfigsManager: ControllerConfigsManager,
-    system: GameSystem,
+    private val system: GameSystem,
     systemCoreConfig: SystemCoreConfig,
     private val sharedPreferences: SharedPreferences,
     savesManager: SavesManager,
@@ -93,6 +93,8 @@ class BaseGameScreenViewModel(
             ) as T
         }
     }
+
+    val frameSpeed = MutableStateFlow(1)
 
     private val sideEffects = GameViewModelSideEffects(viewModelScope)
     val retroGameView =
@@ -188,6 +190,7 @@ class BaseGameScreenViewModel(
                 saves.restoreAutoSaveAsync(it)
             }
         }
+        result.frameSpeed = frameSpeed.value
         return result
     }
 
@@ -268,43 +271,29 @@ class BaseGameScreenViewModel(
         }
     }
 
+    fun preferredFrameSpeed(): Int =
+        FastForwardSpeeds.preferred(sharedPreferences.getInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, 2))
+
+    fun setFrameSpeed(speed: Int) {
+        val validated = if (system.fastForwardSupport) FastForwardSpeeds.validate(speed) else 1
+        retroGameView.retroGameView?.frameSpeed = validated
+        frameSpeed.value = validated
+        if (validated > 1) {
+            sharedPreferences.edit().putInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, validated).apply()
+        }
+    }
+
+    fun setPreferredFrameSpeed(speed: Int) {
+        val preferred = FastForwardSpeeds.preferred(speed)
+        sharedPreferences.edit().putInt(FastForwardSpeeds.PREFERRED_SPEED_KEY, preferred).apply()
+        setFrameSpeed(FastForwardSpeeds.select(frameSpeed.value, preferred))
+    }
+
     fun toggleFastForward() {
-        Timber.d("Loading quick save")
-        retroGameView.retroGameView?.apply {
-            val speeds = getFastForwardCycleSpeeds()
-            val currentIndex = speeds.indexOf(frameSpeed).let { if (it >= 0) it else 0 }
-            frameSpeed = speeds[(currentIndex + 1) % speeds.size]
-        }
-    }
-
-    private fun getFastForwardCycleSpeeds(): List<Int> {
+        if (!system.fastForwardSupport) return
         val key = appContext.getString(R.string.pref_key_fast_forward_cycle_speeds)
-        val raw =
-            sharedPreferences.getStringSet(
-                key,
-                DEFAULT_FAST_FORWARD_CYCLE_SPEEDS.map { it.toString() }.toSet(),
-            ) ?: emptySet()
-
-        val parsed =
-            raw.mapNotNull { it.toIntOrNull() }
-                .filter { it >= 1 }
-                .distinct()
-                .sorted()
-                .toMutableList()
-
-        if (parsed.isEmpty()) {
-            return DEFAULT_FAST_FORWARD_CYCLE_SPEEDS
-        }
-
-        if (!parsed.contains(1)) {
-            parsed.add(0, 1)
-        }
-
-        return parsed
-    }
-
-    companion object {
-        private val DEFAULT_FAST_FORWARD_CYCLE_SPEEDS = listOf(1, 2, 4, 8, 16)
+        val speeds = FastForwardSpeeds.cycle(sharedPreferences.getStringSet(key, null))
+        setFrameSpeed(FastForwardSpeeds.next(frameSpeed.value, speeds))
     }
 
     suspend fun reset() =
